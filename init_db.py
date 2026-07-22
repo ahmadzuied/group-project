@@ -16,6 +16,8 @@ c.execute("DROP TABLE IF EXISTS attendance")
 c.execute("DROP TABLE IF EXISTS confirmations")
 c.execute("DROP TABLE IF EXISTS assignments")
 c.execute("DROP TABLE IF EXISTS settings")
+c.execute("DROP TABLE IF EXISTS teacher_settings")
+c.execute("DROP TABLE IF EXISTS custom_days_off")
 
 # جدول الطلاب والمحاضرين
 c.execute("""
@@ -90,6 +92,22 @@ CREATE TABLE settings (
 )
 """)
 
+c.execute("""
+CREATE TABLE teacher_settings (
+    teacher_id TEXT PRIMARY KEY,
+    attendance_open INTEGER DEFAULT 0
+)
+""")
+
+c.execute("""
+CREATE TABLE custom_days_off (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    teacher_id TEXT,
+    date TEXT,
+    reason TEXT
+)
+""")
+
 # فتح تسجيل الحضور مبدئياً
 c.execute("INSERT INTO settings (attendance_open) VALUES (1)")
 
@@ -155,6 +173,14 @@ users = [
 c.executemany(
     "INSERT INTO students VALUES (?,?,?,?,?,?,?)",
     users
+)
+
+c.executemany(
+    "INSERT INTO teacher_settings (teacher_id, attendance_open) VALUES (?, ?)",
+    [
+        ("T001", 1),
+        ("T002", 1)
+    ]
 )
 
 # المساقات وربطها بالمحاضرين

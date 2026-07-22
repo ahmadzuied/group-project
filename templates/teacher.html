@@ -153,6 +153,50 @@
       background: #8b5e3c;
     }
 
+    .management-actions {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .manage-btn {
+      background: #2f5d50;
+    }
+
+    .manage-btn:hover {
+      background: #3f7666;
+    }
+
+    .holiday-box {
+      width: 86%;
+      margin: 0 auto 24px;
+      padding: 15px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 1.7;
+    }
+
+    .holiday-normal {
+      background: #eef7ff;
+      color: #24557a;
+      border: 1px solid #7aa7c7;
+    }
+
+    .holiday-active {
+      background: #fff3cd;
+      color: #7a5a00;
+      border: 1px solid #d6a100;
+    }
+
+    .holiday-error {
+      background: #f3f3f3;
+      color: #666;
+      border: 1px solid #bbb;
+    }
+
     @media (max-width: 600px) {
       .container {
         padding: 25px;
@@ -201,6 +245,10 @@
 
     <p class="teacher-id">رقم المحاضر: {{ teacher_id }}</p>
 
+    <div id="holidayInfo" class="holiday-box holiday-normal">
+      جاري التحقق من العطل الرسمية...
+    </div>
+
     <div class="buttons">
       <button onclick="toggleAttendance('open')">✅ فتح تسجيل الحضور</button>
       <button class="close-btn" onclick="toggleAttendance('close')">❌ إغلاق تسجيل الحضور</button>
@@ -212,9 +260,14 @@
 
     <p class="hint">يمكنك فتح أو إغلاق تسجيل الحضور للطلاب من هنا.</p>
 
-    <button class="report-btn" onclick="window.location.href='/teacher_reports_page'">
-      📊 عرض تقارير الطلاب
-    </button>
+    <div class="management-actions">
+      <button class="report-btn" onclick="window.location.href='/teacher_reports_page'">
+        📊 عرض تقارير الطلاب
+      </button>
+      <button class="manage-btn" onclick="window.location.href='/manage_students_page'">
+        ⚙️ إدارة طلاب المساقات وأيام التعطيل
+      </button>
+    </div>
 
   </div>
 
@@ -243,6 +296,47 @@
         });
     }
 
+    function loadHolidayStatus() {
+      const holidayBox = document.getElementById("holidayInfo");
+
+      fetch("/holiday_status")
+        .then(res => res.json())
+        .then(data => {
+          holidayBox.className = "holiday-box";
+
+          if (data.custom_day) {
+            holidayBox.classList.add("holiday-active");
+            holidayBox.innerText = `تعطيل داخلي اليوم: ${data.custom_day.reason}`;
+            return;
+          }
+
+          const lines = [];
+
+          if (data.available) {
+            if (data.is_holiday && data.holiday) {
+              lines.push(`عطلة رسمية اليوم: ${data.holiday.name}`);
+            } else if (data.next_holiday) {
+              lines.push(`أقرب عطلة رسمية: ${data.next_holiday.name} بتاريخ ${data.next_holiday.date}`);
+            } else {
+              lines.push("لا توجد عطلة رسمية قادمة ضمن البيانات المتاحة.");
+            }
+          } else {
+            lines.push("تعذر تحميل بيانات العطل الرسمية حالياً.");
+          }
+
+          if (data.next_custom_day) {
+            lines.push(`أقرب تعطيل داخلي: ${data.next_custom_day.reason} بتاريخ ${data.next_custom_day.date}`);
+          }
+
+          holidayBox.classList.add(data.available ? "holiday-normal" : "holiday-error");
+          holidayBox.innerText = lines.join(" | ");
+        })
+        .catch(() => {
+          holidayBox.className = "holiday-box holiday-error";
+          holidayBox.innerText = "تعذر تحميل بيانات العطل الرسمية حالياً.";
+        });
+    }
+
     function toggleAttendance(action) {
       const statusBox = document.getElementById("status");
 
@@ -254,9 +348,16 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: action })
       })
-      .then(res => res.json())
-      .then(data => {
-        loadStatus();
+      .then(async res => {
+        const data = await res.json();
+
+        if (!res.ok) {
+          updateStatusBox(data.message || "تعذر تحديث حالة التسجيل", false);
+          loadHolidayStatus();
+          return;
+        }
+
+        updateStatusBox(data.message, data.open);
       })
       .catch(() => {
         updateStatusBox("❌ خطأ في الاتصال بالسيرفر", false);
@@ -264,6 +365,7 @@
     }
 
     loadStatus();
+    loadHolidayStatus();
   </script>
 </body>
 </html>

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>إدارة طلاب المساقات وأيام التعطيل</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Tahoma", sans-serif;
+      background: linear-gradient(to right, #f5f5dc, #d2b48c);
+      direction: rtl;
+      margin: 0;
+      color: #2d211c;
+    }
+
+    header {
+      background: #5c4033;
+      color: #fff;
+      padding: 18px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    .page {
+      width: 94%;
+      max-width: 1180px;
+      margin: 30px auto 50px;
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 11px 18px;
+      cursor: pointer;
+      color: #fff;
+      background: #5c4033;
+      font-size: 15px;
+      font-weight: bold;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn:hover {
+      background: #7b5544;
+    }
+
+    .btn-secondary {
+      background: #2f5d50;
+    }
+
+    .btn-danger {
+      background: #9a2020;
+    }
+
+    .btn-small {
+      padding: 7px 11px;
+      font-size: 13px;
+    }
+
+    .message {
+      background: #eef7ff;
+      border: 1px solid #7aa7c7;
+      color: #24557a;
+      border-radius: 9px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      font-weight: bold;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #5c4033;
+      border-bottom: 2px solid #d2b48c;
+      padding-bottom: 10px;
+      font-size: 22px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #4c3930;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px 11px;
+      border: 1px solid #cdbcae;
+      border-radius: 7px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .submit-row {
+      margin-top: 14px;
+      text-align: left;
+    }
+
+    .table-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+      margin-bottom: 22px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    th,
+    td {
+      padding: 11px 9px;
+      border-bottom: 1px solid #e8ddd5;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #f5eee8;
+      color: #5c4033;
+      font-size: 14px;
+    }
+
+    td {
+      font-size: 13px;
+    }
+
+    .edit-form input {
+      min-width: 115px;
+      margin-bottom: 5px;
+    }
+
+    .course-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .course-chip {
+      background: #edf4f1;
+      border: 1px solid #7ba092;
+      color: #315c4e;
+      padding: 5px 8px;
+      border-radius: 16px;
+      white-space: nowrap;
+    }
+
+    .remove-form {
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    .day-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .day-item {
+      border: 1px solid #decfc2;
+      background: #fffaf6;
+      border-radius: 9px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .empty {
+      color: #777;
+      text-align: center;
+      padding: 14px;
+    }
+
+    @media (max-width: 850px) {
+      .grid,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .full {
+        grid-column: auto;
+      }
+
+      .top-actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>إدارة طلاب المساقات وأيام التعطيل</header>
+
+  <div class="page">
+    <div class="top-actions">
+      <a class="btn" href="/teacher_page">العودة إلى واجهة المحاضر</a>
+      <a class="btn btn-secondary" href="/teacher_reports_page">عرض تقارير الطلاب</a>
+    </div>
+
+    {% if message %}
+      <div class="message">{{ message }}</div>
+    {% endif %}
+
+    <div class="grid">
+      <section class="card">
+        <h2>ربط طالب موجود بمساق</h2>
+
+        <form method="POST" action="/assign_student_course">
+          <div class="form-grid">
+            <div class="full">
+              <label>الطالب</label>
+              <select name="student_id" required>
+                <option value="">اختر الطالب</option>
+                {% for student in available_students %}
+                  <option value="{{ student['id'] }}">{{ student['name'] }} - {{ student['id'] }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="full">
+              <label>المساق</label>
+              <select name="course_id" required>
+                <option value="">اختر المساق</option>
+                {% for course in courses %}
+                  <option value="{{ course['course_id'] }}">{{ course['course_name'] }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="submit-row">
+            <button class="btn btn-secondary" type="submit">ربط الطالب بالمساق</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>إضافة يوم تعطيل داخلي</h2>
+
+        <form method="POST" action="/add_day_off">
+          <div class="form-grid">
+            <div>
+              <label>التاريخ</label>
+              <input type="date" name="date" required>
+            </div>
+
+            <div>
+              <label>سبب التعطيل</label>
+              <input type="text" name="reason" placeholder="مثال: غياب المحاضر أو فعالية جامعية" required>
+            </div>
+          </div>
+
+          <div class="submit-row">
+            <button class="btn btn-secondary" type="submit">حفظ يوم التعطيل</button>
+          </div>
+        </form>
+
+        <div class="day-list" style="margin-top: 18px;">
+          {% if days_off %}
+            {% for day in days_off %}
+              <div class="day-item">
+                <div>
+                  <strong>{{ day['date'] }}</strong>
+                  <div>{{ day['reason'] }}</div>
+                </div>
+                <form method="POST" action="/delete_day_off/{{ day['id'] }}">
+                  <button class="btn btn-danger btn-small" type="submit">حذف</button>
+                </form>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty">لا توجد أيام تعطيل مضافة.</div>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+
+    <section class="table-card">
+      <h2>الطلاب المرتبطون بمساقاتك</h2>
+
+      {% if students %}
+        <table>
+          <thead>
+            <tr>
+              <th>الرقم</th>
+              <th>الاسم</th>
+              <th>الكلية</th>
+              <th>التخصص</th>
+              <th>السنة</th>
+              <th>المساقات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in students %}
+              <tr>
+                <td>{{ student['id'] }}</td>
+                <td>{{ student['name'] }}</td>
+                <td>{{ student['college'] }}</td>
+                <td>{{ student['major'] }}</td>
+                <td>{{ student['year'] }}</td>
+                <td>
+                  <div class="course-list">
+                    {% for enrollment in enrollment_map.get(student['id'], []) %}
+                      <span class="course-chip">
+                        {{ enrollment['course_name'] }}
+                        <form class="remove-form" method="POST" action="/remove_student_course">
+                          <input type="hidden" name="student_id" value="{{ student['id'] }}">
+                          <input type="hidden" name="course_id" value="{{ enrollment['course_id'] }}">
+                          <button class="btn btn-danger btn-small" type="submit">إزالة</button>
+                        </form>
+                      </span>
+                    {% endfor %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty">لا يوجد طلاب مرتبطون بمساقاتك حالياً.</div>
+      {% endif %}
+    </section>
+  </div>
+</body>
+</html>

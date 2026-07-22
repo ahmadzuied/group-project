@@ -199,6 +199,30 @@
       font-weight: bold;
     }
 
+    .risk-badge {
+      display: inline-block;
+      min-width: 70px;
+      padding: 6px 10px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .risk-low {
+      background: #dff5df;
+      color: #1f7a1f;
+    }
+
+    .risk-medium {
+      background: #fff1bd;
+      color: #856404;
+    }
+
+    .risk-high {
+      background: #ffd8d8;
+      color: #B22222;
+    }
+
     .back-btn {
       margin-top: 25px;
       background: #3e241c;
@@ -305,12 +329,13 @@
             <th>النسبة</th>
             <th>التوصية</th>
             <th>المستوى</th>
+            <th>خطر الغياب</th>
           </tr>
         </thead>
 
         <tbody id="reportTable">
           <tr>
-            <td colspan="10" class="empty-row">اختر مساقًا لعرض البيانات</td>
+            <td colspan="11" class="empty-row">اختر مساقًا لعرض البيانات</td>
           </tr>
         </tbody>
       </table>
@@ -340,6 +365,12 @@
       return select.options[select.selectedIndex]?.text || "";
     }
 
+    function getRiskClass(riskLevel) {
+      if (riskLevel === "منخفض") return "risk-low";
+      if (riskLevel === "متوسط") return "risk-medium";
+      return "risk-high";
+    }
+
     function renderTable(data) {
       const tableBody = document.getElementById("reportTable");
       tableBody.innerHTML = "";
@@ -347,7 +378,7 @@
       if (!data || data.length === 0) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="10" class="empty-row">لا توجد بيانات لعرضها</td>
+            <td colspan="11" class="empty-row">لا توجد بيانات لعرضها</td>
           </tr>
         `;
         return;
@@ -355,6 +386,7 @@
 
       data.forEach(record => {
         const rowClass = getRowClass(record.level);
+        const riskClass = getRiskClass(record.risk_level);
         const courseName = record.course || getSelectedCourseName();
 
         tableBody.innerHTML += `
@@ -369,6 +401,7 @@
             <td>${record.percentage}%</td>
             <td>${record.recommendation}</td>
             <td>${record.level}</td>
+            <td><span class="risk-badge ${riskClass}" title="${record.risk_message}">${record.risk_level}</span></td>
           </tr>
         `;
       });

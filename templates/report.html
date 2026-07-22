@@ -147,6 +147,33 @@
       border: 2px solid #B22222;
     }
 
+    .risk-card {
+      padding: 14px;
+      border-radius: 9px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 1.7;
+    }
+
+    .risk-low {
+      background: #e6ffe6;
+      color: #1f7a1f;
+      border: 2px solid #228B22;
+    }
+
+    .risk-medium {
+      background: #fff8dc;
+      color: #856404;
+      border: 2px solid #DAA520;
+    }
+
+    .risk-high {
+      background: #ffe6e6;
+      color: #B22222;
+      border: 2px solid #B22222;
+    }
+
     .table-wrapper {
       overflow-x: auto;
       border-radius: 10px;
@@ -278,6 +305,11 @@
       <h3>💡 التوصية الذكية</h3>
       <div id="recommendation"></div>
     </div>
+
+    <div class="section" id="riskSection">
+      <h3>📈 تحليل خطر الغياب</h3>
+      <div id="riskAnalysis"></div>
+    </div>
   </div>
 
   <footer>© 2026 جامعة الإسراء - جميع الحقوق محفوظة</footer>
@@ -344,6 +376,21 @@
         document.getElementById("recommendation").innerHTML = `
           <div class="recommendation ${levelClass}">
             ${data.recommendation}
+          </div>
+        `;
+
+        let riskClass = "risk-high";
+
+        if (data.risk_level === "منخفض") {
+          riskClass = "risk-low";
+        } else if (data.risk_level === "متوسط") {
+          riskClass = "risk-medium";
+        }
+
+        document.getElementById("riskAnalysis").innerHTML = `
+          <div class="risk-card ${riskClass}">
+            مستوى الخطر: ${data.risk_level}<br>
+            ${data.risk_message}
           </div>
         `;
 

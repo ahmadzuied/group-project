@@ -4,11 +4,52 @@ from werkzeug.security import check_password_hash
 import sqlite3
 from datetime import datetime
 import os
+import json
+from urllib.request import Request, urlopen
+from sklearn.tree import DecisionTreeClassifier
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "attendance.db")
 
 TOTAL_LECTURES = 15
+HOLIDAY_API_URL = "https://tallyfy.com/national-holidays/api/PS/{year}.json"
+HOLIDAY_CACHE = {}
+
+risk_model = DecisionTreeClassifier(max_depth=3, random_state=7)
+risk_model.fit(
+    [
+        [15, 0, 100],
+        [14, 1, 93.33],
+        [13, 2, 86.67],
+        [12, 3, 80],
+        [11, 4, 73.33],
+        [10, 5, 66.67],
+        [9, 6, 60],
+        [8, 7, 53.33],
+        [7, 8, 46.67],
+        [6, 9, 40],
+        [5, 10, 33.33],
+        [3, 12, 20],
+        [1, 14, 6.67],
+        [0, 15, 0]
+    ],
+    [
+        "منخفض",
+        "منخفض",
+        "منخفض",
+        "منخفض",
+        "متوسط",
+        "متوسط",
+        "متوسط",
+        "متوسط",
+        "مرتفع",
+        "مرتفع",
+        "مرتفع",
+        "مرتفع",
+        "مرتفع",
+        "مرتفع"
+    ]
+)
 
 app = Flask(__name__)
 app.secret_key = "attendance-system-secret-key"
@@ -21,6 +62,78 @@ def get_db_connection():
     return conn
 
 
+def ensure_schema():
+    conn = get_db_connection()
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS teacher_settings (
+            teacher_id TEXT PRIMARY KEY,
+            attendance_open INTEGER DEFAULT 0
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS custom_days_off (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            teacher_id TEXT,
+            date TEXT,
+            reason TEXT
+        )
+    """)
+
+    default_setting = conn.execute(
+        "SELECT attendance_open FROM settings ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+
+    default_value = default_setting["attendance_open"] if default_setting else 0
+
+    teachers = conn.execute(
+        "SELECT id FROM students WHERE role='teacher'"
+    ).fetchall()
+
+    for teacher in teachers:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO teacher_settings (teacher_id, attendance_open)
+            VALUES (?, ?)
+            """,
+            (teacher["id"], default_value)
+        )
+
+    conn.commit()
+    conn.close()
+
+
+def get_teacher_day_off(teacher_id, date_text=None):
+    if date_text is None:
+        date_text = datetime.now().strftime("%Y-%m-%d")
+
+    conn = get_db_connection()
+    day_off = conn.execute(
+        """
+        SELECT id, date, reason
+        FROM custom_days_off
+        WHERE teacher_id=? AND date=?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (teacher_id, date_text)
+    ).fetchone()
+    conn.close()
+
+    if not day_off:
+        return None
+
+    return {
+        "id": day_off["id"],
+        "date": day_off["date"],
+        "reason": day_off["reason"]
+    }
+
+
+ensure_schema()
+
+
 def get_recommendation(percentage):
     if percentage >= 80:
         return "ممتاز", "✅ حضورك ممتاز، استمر بهذا المستوى."
@@ -28,6 +141,82 @@ def get_recommendation(percentage):
         return "متوسط", "⚠️ حضورك متوسط، حاول الالتزام أكثر بالمحاضرات."
     else:
         return "ضعيف", "❌ حضورك ضعيف، يجب تحسين الالتزام بالحضور."
+
+
+def predict_attendance_risk(attendance_count):
+    missed_count = max(TOTAL_LECTURES - attendance_count, 0)
+    percentage = round((attendance_count / TOTAL_LECTURES) * 100, 2)
+    risk = risk_model.predict([[attendance_count, missed_count, percentage]])[0]
+
+    messages = {
+        "منخفض": "مستوى الخطر منخفض، ونمط الحضور الحالي مستقر.",
+        "متوسط": "مستوى الخطر متوسط، ويُنصح بتحسين الالتزام بالمحاضرات القادمة.",
+        "مرتفع": "مستوى الخطر مرتفع، ويحتاج الطالب إلى رفع نسبة الحضور بشكل واضح."
+    }
+
+    return risk, messages[risk]
+
+
+def get_public_holidays(year):
+    if year in HOLIDAY_CACHE:
+        return HOLIDAY_CACHE[year]
+
+    request_data = Request(
+        HOLIDAY_API_URL.format(year=year),
+        headers={"User-Agent": "StudentAttendanceSystem/1.0"}
+    )
+
+    with urlopen(request_data, timeout=6) as response:
+        data = json.loads(response.read().decode("utf-8"))
+
+    holidays = data.get("holidays", [])
+    HOLIDAY_CACHE[year] = holidays
+    return holidays
+
+
+def get_holiday_status():
+    today = datetime.now().date()
+
+    try:
+        holidays = get_public_holidays(today.year)
+    except Exception:
+        return {
+            "available": False,
+            "is_holiday": False,
+            "holiday": None,
+            "next_holiday": None
+        }
+
+    today_holiday = None
+    upcoming = []
+
+    for holiday in holidays:
+        holiday_date_text = holiday.get("observed_date") or holiday.get("date")
+
+        try:
+            holiday_date = datetime.strptime(holiday_date_text, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            continue
+
+        item = {
+            "name": holiday.get("local_name") or holiday.get("name") or "عطلة رسمية",
+            "date": holiday_date_text
+        }
+
+        if holiday_date == today:
+            today_holiday = item
+        elif holiday_date > today:
+            upcoming.append((holiday_date, item))
+
+    upcoming.sort(key=lambda item: item[0])
+    next_holiday = upcoming[0][1] if upcoming else None
+
+    return {
+        "available": True,
+        "is_holiday": today_holiday is not None,
+        "holiday": today_holiday,
+        "next_holiday": next_holiday
+    }
 
 
 @app.route("/")
@@ -123,20 +312,9 @@ def attendance():
 
     conn = get_db_connection()
 
-    setting = conn.execute(
-        "SELECT attendance_open FROM settings ORDER BY id DESC LIMIT 1"
-    ).fetchone()
-
-    if not setting or setting["attendance_open"] != 1:
-        conn.close()
-        return redirect(url_for(
-            "attendance_page",
-            message="❌ تسجيل الحضور مغلق حالياً"
-        ))
-
     allowed_course = conn.execute(
         """
-        SELECT courses.course_id, courses.course_name
+        SELECT courses.course_id, courses.course_name, courses.teacher_id
         FROM courses
         JOIN student_courses ON courses.course_id = student_courses.course_id
         WHERE student_courses.student_id=? AND courses.course_id=?
@@ -149,6 +327,43 @@ def attendance():
         return redirect(url_for(
             "attendance_page",
             message="❌ غير مسموح لك بالتسجيل في هذا المساق"
+        ))
+
+    day_off = conn.execute(
+        """
+        SELECT reason
+        FROM custom_days_off
+        WHERE teacher_id=? AND date=?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (
+            allowed_course["teacher_id"],
+            datetime.now().strftime("%Y-%m-%d")
+        )
+    ).fetchone()
+
+    if day_off:
+        conn.close()
+        return redirect(url_for(
+            "attendance_page",
+            message=f"❌ لا يوجد تسجيل حضور اليوم: {day_off['reason']}"
+        ))
+
+    setting = conn.execute(
+        """
+        SELECT attendance_open
+        FROM teacher_settings
+        WHERE teacher_id=?
+        """,
+        (allowed_course["teacher_id"],)
+    ).fetchone()
+
+    if not setting or setting["attendance_open"] != 1:
+        conn.close()
+        return redirect(url_for(
+            "attendance_page",
+            message="❌ تسجيل الحضور مغلق حالياً"
         ))
 
     current_date = datetime.now().strftime("%Y-%m-%d")
@@ -255,10 +470,19 @@ def toggle_attendance():
     if session.get("role") != "teacher":
         return jsonify({"message": "❌ غير مصرح لك"}), 403
 
-    data = request.get_json()
+    teacher_id = session.get("user_id")
+    data = request.get_json() or {}
     action = data.get("action")
 
     if action == "open":
+        day_off = get_teacher_day_off(teacher_id)
+
+        if day_off:
+            return jsonify({
+                "message": f"⚠️ لا يمكن فتح تسجيل الحضور اليوم: {day_off['reason']}",
+                "open": False
+            }), 409
+
         value = 1
         message = "✅ تسجيل الحضور مفتوح حالياً"
     elif action == "close":
@@ -269,33 +493,85 @@ def toggle_attendance():
 
     conn = get_db_connection()
 
-    row = conn.execute(
-        "SELECT id FROM settings ORDER BY id DESC LIMIT 1"
-    ).fetchone()
-
-    if row:
-        conn.execute(
-            "UPDATE settings SET attendance_open=? WHERE id=?",
-            (value, row["id"])
-        )
-    else:
-        conn.execute(
-            "INSERT INTO settings (attendance_open) VALUES (?)",
-            (value,)
-        )
+    conn.execute(
+        """
+        INSERT INTO teacher_settings (teacher_id, attendance_open)
+        VALUES (?, ?)
+        ON CONFLICT(teacher_id)
+        DO UPDATE SET attendance_open=excluded.attendance_open
+        """,
+        (teacher_id, value)
+    )
 
     conn.commit()
     conn.close()
 
-    return jsonify({"message": message})
+    return jsonify({"message": message, "open": value == 1})
 
+@app.route("/holiday_status")
+def holiday_status():
+    if session.get("role") != "teacher":
+        return jsonify({"error": "غير مصرح لك"}), 403
+
+    teacher_id = session.get("user_id")
+    result = get_holiday_status()
+
+    conn = get_db_connection()
+
+    today_text = datetime.now().strftime("%Y-%m-%d")
+
+    custom_day = conn.execute(
+        """
+        SELECT id, date, reason
+        FROM custom_days_off
+        WHERE teacher_id=? AND date=?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (teacher_id, today_text)
+    ).fetchone()
+
+    next_custom_day = conn.execute(
+        """
+        SELECT id, date, reason
+        FROM custom_days_off
+        WHERE teacher_id=? AND date>?
+        ORDER BY date ASC
+        LIMIT 1
+        """,
+        (teacher_id, today_text)
+    ).fetchone()
+
+    conn.close()
+
+    result["custom_day"] = dict(custom_day) if custom_day else None
+    result["next_custom_day"] = dict(next_custom_day) if next_custom_day else None
+
+    return jsonify(result)
 
 @app.route("/attendance_status")
 def attendance_status():
+    if session.get("role") != "teacher":
+        return jsonify({"error": "غير مصرح لك"}), 403
+
+    teacher_id = session.get("user_id")
+    day_off = get_teacher_day_off(teacher_id)
+
+    if day_off:
+        return jsonify({
+            "open": False,
+            "message": f"⛔ تسجيل الحضور متوقف اليوم: {day_off['reason']}"
+        })
+
     conn = get_db_connection()
 
     setting = conn.execute(
-        "SELECT attendance_open FROM settings ORDER BY id DESC LIMIT 1"
+        """
+        SELECT attendance_open
+        FROM teacher_settings
+        WHERE teacher_id=?
+        """,
+        (teacher_id,)
     ).fetchone()
 
     conn.close()
@@ -310,7 +586,6 @@ def attendance_status():
         "open": False,
         "message": "❌ تسجيل الحضور مغلق حالياً"
     })
-
 
 @app.route("/student_report_page")
 def student_report_page():
@@ -393,6 +668,7 @@ def student_report(student_id):
     attendance_count = len(records)
     percentage = round((attendance_count / TOTAL_LECTURES) * 100, 2)
     level, recommendation = get_recommendation(percentage)
+    risk_level, risk_message = predict_attendance_risk(attendance_count)
 
     result_records = []
 
@@ -415,6 +691,8 @@ def student_report(student_id):
         "percentage": percentage,
         "level": level,
         "recommendation": recommendation,
+        "risk_level": risk_level,
+        "risk_message": risk_message,
         "records": result_records
     })
 
@@ -514,6 +792,7 @@ def all_reports():
 
         percentage = round((attendance_count / TOTAL_LECTURES) * 100, 2)
         level, recommendation = get_recommendation(percentage)
+        risk_level, risk_message = predict_attendance_risk(attendance_count)
 
         reports.append({
             "id": student["id"],
@@ -525,12 +804,304 @@ def all_reports():
             "attendance_count": attendance_count,
             "percentage": percentage,
             "recommendation": recommendation,
-            "level": level
+            "level": level,
+            "risk_level": risk_level,
+            "risk_message": risk_message
         })
 
     conn.close()
 
     return jsonify({"reports": reports})
+
+
+@app.route("/manage_students_page")
+def manage_students_page():
+    if session.get("role") != "teacher":
+        return redirect(url_for("home"))
+
+    teacher_id = session.get("user_id")
+    message = request.args.get("message", "")
+
+    conn = get_db_connection()
+
+    courses = conn.execute(
+        """
+        SELECT course_id, course_name
+        FROM courses
+        WHERE teacher_id=?
+        ORDER BY course_name
+        """,
+        (teacher_id,)
+    ).fetchall()
+
+    students = conn.execute(
+        """
+        SELECT DISTINCT
+            students.id,
+            students.name,
+            students.college,
+            students.major,
+            students.year
+        FROM students
+        JOIN student_courses ON students.id=student_courses.student_id
+        JOIN courses ON student_courses.course_id=courses.course_id
+        WHERE students.role='student'
+        AND courses.teacher_id=?
+        ORDER BY students.name
+        """,
+        (teacher_id,)
+    ).fetchall()
+
+    enrollments = conn.execute(
+        """
+        SELECT
+            student_courses.student_id,
+            courses.course_id,
+            courses.course_name
+        FROM student_courses
+        JOIN courses ON student_courses.course_id=courses.course_id
+        WHERE courses.teacher_id=?
+        ORDER BY courses.course_name
+        """,
+        (teacher_id,)
+    ).fetchall()
+
+    available_students = conn.execute(
+        """
+        SELECT id, name, college, major, year
+        FROM students
+        WHERE role='student'
+        ORDER BY name
+        """
+    ).fetchall()
+
+    days_off = conn.execute(
+        """
+        SELECT id, date, reason
+        FROM custom_days_off
+        WHERE teacher_id=?
+        ORDER BY date DESC
+        """,
+        (teacher_id,)
+    ).fetchall()
+
+    conn.close()
+
+    enrollment_map = {}
+
+    for item in enrollments:
+        enrollment_map.setdefault(item["student_id"], []).append({
+            "course_id": item["course_id"],
+            "course_name": item["course_name"]
+        })
+
+    return render_template(
+        "teacher_management.html",
+        courses=courses,
+        students=students,
+        available_students=available_students,
+        enrollment_map=enrollment_map,
+        days_off=days_off,
+        message=message
+    )
+
+
+@app.route("/assign_student_course", methods=["POST"])
+def assign_student_course():
+    if session.get("role") != "teacher":
+        return redirect(url_for("home"))
+
+    teacher_id = session.get("user_id")
+    student_id = request.form.get("student_id", "").strip()
+    course_id = request.form.get("course_id", "").strip()
+
+    if not student_id or not course_id:
+        return redirect(url_for(
+            "manage_students_page",
+            message="يرجى اختيار الطالب والمساق"
+        ))
+
+    conn = get_db_connection()
+
+    student = conn.execute(
+        "SELECT id FROM students WHERE id=? AND role='student'",
+        (student_id,)
+    ).fetchone()
+
+    course = conn.execute(
+        """
+        SELECT course_id
+        FROM courses
+        WHERE course_id=? AND teacher_id=?
+        """,
+        (course_id, teacher_id)
+    ).fetchone()
+
+    if not student or not course:
+        conn.close()
+        return redirect(url_for(
+            "manage_students_page",
+            message="الطالب أو المساق المحدد غير متاح"
+        ))
+
+    existing = conn.execute(
+        """
+        SELECT 1
+        FROM student_courses
+        WHERE student_id=? AND course_id=?
+        """,
+        (student_id, course_id)
+    ).fetchone()
+
+    if existing:
+        conn.close()
+        return redirect(url_for(
+            "manage_students_page",
+            message="الطالب مرتبط بهذا المساق مسبقاً"
+        ))
+
+    conn.execute(
+        """
+        INSERT INTO student_courses (student_id, course_id)
+        VALUES (?, ?)
+        """,
+        (student_id, course_id)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for(
+        "manage_students_page",
+        message="تم ربط الطالب بالمساق بنجاح"
+    ))
+
+
+@app.route("/remove_student_course", methods=["POST"])
+def remove_student_course():
+    if session.get("role") != "teacher":
+        return redirect(url_for("home"))
+
+    teacher_id = session.get("user_id")
+    student_id = request.form.get("student_id")
+    course_id = request.form.get("course_id")
+
+    conn = get_db_connection()
+
+    course = conn.execute(
+        """
+        SELECT course_id
+        FROM courses
+        WHERE course_id=? AND teacher_id=?
+        """,
+        (course_id, teacher_id)
+    ).fetchone()
+
+    if course:
+        conn.execute(
+            """
+            DELETE FROM student_courses
+            WHERE student_id=? AND course_id=?
+            """,
+            (student_id, course_id)
+        )
+        conn.commit()
+
+    conn.close()
+
+    return redirect(url_for(
+        "manage_students_page",
+        message="تم إزالة الطالب من المساق"
+    ))
+
+
+@app.route("/add_day_off", methods=["POST"])
+def add_day_off():
+    if session.get("role") != "teacher":
+        return redirect(url_for("home"))
+
+    teacher_id = session.get("user_id")
+    date_text = request.form.get("date", "").strip()
+    reason = request.form.get("reason", "").strip()
+
+    if not date_text or not reason:
+        return redirect(url_for(
+            "manage_students_page",
+            message="يرجى تحديد تاريخ التعطيل وسببه"
+        ))
+
+    conn = get_db_connection()
+
+    existing = conn.execute(
+        """
+        SELECT id
+        FROM custom_days_off
+        WHERE teacher_id=? AND date=?
+        LIMIT 1
+        """,
+        (teacher_id, date_text)
+    ).fetchone()
+
+    if existing:
+        conn.execute(
+            """
+            UPDATE custom_days_off
+            SET reason=?
+            WHERE id=?
+            """,
+            (reason, existing["id"])
+        )
+    else:
+        conn.execute(
+            """
+            INSERT INTO custom_days_off (teacher_id, date, reason)
+            VALUES (?, ?, ?)
+            """,
+            (teacher_id, date_text, reason)
+        )
+
+    if date_text == datetime.now().strftime("%Y-%m-%d"):
+        conn.execute(
+            """
+            INSERT INTO teacher_settings (teacher_id, attendance_open)
+            VALUES (?, 0)
+            ON CONFLICT(teacher_id)
+            DO UPDATE SET attendance_open=0
+            """,
+            (teacher_id,)
+        )
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for(
+        "manage_students_page",
+        message="تم حفظ يوم التعطيل"
+    ))
+
+
+@app.route("/delete_day_off/<int:day_id>", methods=["POST"])
+def delete_day_off(day_id):
+    if session.get("role") != "teacher":
+        return redirect(url_for("home"))
+
+    teacher_id = session.get("user_id")
+
+    conn = get_db_connection()
+    conn.execute(
+        """
+        DELETE FROM custom_days_off
+        WHERE id=? AND teacher_id=?
+        """,
+        (day_id, teacher_id)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for(
+        "manage_students_page",
+        message="تم حذف يوم التعطيل"
+    ))
 
 
 @app.route("/logout")
