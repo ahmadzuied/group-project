@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>نظام الحضور - الطالب</title>
+
+  <style>
+    body {
+      font-family: "Tahoma", sans-serif;
+      background-color: #f9f6ee;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+    }
+
+    header {
+      background-color: #5c4033;
+      color: #fff;
+      text-align: center;
+      padding: 20px 0;
+      font-size: 26px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .attendance-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100vh - 100px);
+      padding: 35px 15px;
+    }
+
+    .attendance-box {
+      background-color: #fff;
+      border: 2px solid #5c4033;
+      border-radius: 14px;
+      width: 430px;
+      max-width: 95%;
+      padding: 35px;
+      box-shadow: 0 0 20px rgba(92,64,51,0.18);
+      text-align: center;
+    }
+
+    .attendance-box h2 {
+      color: #5c4033;
+      margin-bottom: 18px;
+      font-size: 24px;
+    }
+
+    .description {
+      color: #222;
+      font-size: 16px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    select {
+      width: 100%;
+      padding: 13px;
+      margin: 10px 0 18px;
+      border: 1px solid #ccc;
+      border-radius: 7px;
+      font-size: 15px;
+      background-color: #fdfaf3;
+      transition: border-color 0.3s;
+      text-align: center;
+    }
+
+    select:focus {
+      border-color: #5c4033;
+      outline: none;
+    }
+
+    button {
+      background-color: #5c4033;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: 0.3s;
+      margin: 8px;
+      min-width: 150px;
+    }
+
+    button:hover {
+      background-color: #3e2a20;
+      transform: scale(1.03);
+    }
+
+    .actions {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .report-btn {
+      background-color: #5c4033;
+    }
+
+    .logout-btn {
+      background-color: #9b0000;
+    }
+
+    .logout-btn:hover {
+      background-color: #700000;
+    }
+
+    .message-box {
+      margin-top: 18px;
+      padding: 13px;
+      border-radius: 9px;
+      font-weight: bold;
+      font-size: 15px;
+      background-color: #fff8dc;
+      color: #856404;
+      border: 1px solid #d6a100;
+    }
+
+    #confirmBtn {
+      display: none;
+      background-color: #228B22;
+    }
+
+    footer {
+      text-align: center;
+      color: #5c4033;
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+
+    @media (max-width: 600px) {
+      .attendance-box {
+        padding: 25px;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>نظام الحضور - الطالب</header>
+
+  <div class="attendance-container">
+    <div class="attendance-box">
+      <h2>👋 أهلاً {{ name }}</h2>
+
+      <p class="description">اختر المساق المسجل لك:</p>
+
+      <form action="/attendance" method="post">
+        <input type="hidden" name="student_id" value="{{ student_id }}">
+
+        <select name="course_id" required>
+          <option value="">-- اختر المساق --</option>
+
+          {% for course in courses %}
+            <option value="{{ course.course_id }}">
+              {{ course.course_name }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <button type="submit">تسجيل الحضور</button>
+      </form>
+
+      {% if message %}
+        <div class="message-box">
+          {{ message }}
+        </div>
+      {% endif %}
+
+      <button id="confirmBtn" type="button">تأكيد الحضور</button>
+
+      <div class="actions">
+        <button type="button" class="report-btn" onclick="window.location.href='/student_report_page'">
+          📊 عرض تقريري
+        </button>
+
+        <button type="button" class="logout-btn" onclick="window.location.href='/logout'">
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer>© 2026 جامعة الإسراء - جميع الحقوق محفوظة</footer>
+
+  <script>
+    setTimeout(() => {
+      document.getElementById("confirmBtn").style.display = "inline-block";
+    }, 900000);
+
+    document.getElementById("confirmBtn").addEventListener("click", () => {
+      fetch("/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `student_id={{ student_id }}`
+      })
+      .then(res => res.text())
+      .then(msg => {
+        let messageBox = document.querySelector(".message-box");
+
+        if (!messageBox) {
+          messageBox = document.createElement("div");
+          messageBox.className = "message-box";
+          document.querySelector(".attendance-box").insertBefore(
+            messageBox,
+            document.getElementById("confirmBtn")
+          );
+        }
+
+        messageBox.innerText = msg;
+      })
+      .catch(() => {
+        let messageBox = document.querySelector(".message-box");
+
+        if (!messageBox) {
+          messageBox = document.createElement("div");
+          messageBox.className = "message-box";
+          document.querySelector(".attendance-box").insertBefore(
+            messageBox,
+            document.getElementById("confirmBtn")
+          );
+        }
+
+        messageBox.innerText = "❌ خطأ في تأكيد الحضور";
+      });
+    });
+  </script>
+</body>
+</html>
