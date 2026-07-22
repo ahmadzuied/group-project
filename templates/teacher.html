@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>👨‍🏫 واجهة المحاضر</title>
+
+  <style>
+    body {
+      font-family: "Tahoma", sans-serif;
+      background: linear-gradient(to right, #f5f5dc, #d2b48c);
+      direction: rtl;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #5c4033;
+      color: #fff;
+      padding: 18px;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .container {
+      background: #fff;
+      padding: 30px 35px 40px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 760px;
+      margin: 45px auto;
+      text-align: center;
+      position: relative;
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .logout-btn {
+      background: #8b0000;
+      color: #fff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      transition: 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #650000;
+      transform: scale(1.03);
+    }
+
+    h2 {
+      color: #5c4033;
+      margin-bottom: 20px;
+      font-size: 27px;
+      border-bottom: 2px solid #d2b48c;
+      padding-bottom: 10px;
+      display: inline-block;
+    }
+
+    .teacher-id {
+      font-size: 19px;
+      margin: 22px 0 30px;
+      color: #222;
+      font-weight: bold;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    button {
+      background: #5c4033;
+      color: #fff;
+      border: none;
+      padding: 13px 26px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: 0.3s;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+    }
+
+    button:hover {
+      background: #8b5e3c;
+      transform: scale(1.04);
+    }
+
+    .close-btn {
+      background: #3e241c;
+    }
+
+    .close-btn:hover {
+      background: #5c3026;
+    }
+
+    .status-box {
+      width: 86%;
+      margin: 0 auto 12px;
+      padding: 17px;
+      border-radius: 10px;
+      font-size: 21px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .status-open {
+      background-color: #e6ffe6;
+      color: #228B22;
+      border: 1px solid #228B22;
+    }
+
+    .status-closed {
+      background-color: #ffe6e6;
+      color: #B22222;
+      border: 1px solid #B22222;
+    }
+
+    .status-loading {
+      background-color: #fff8dc;
+      color: #856404;
+      border: 1px solid #d6a100;
+    }
+
+    .hint {
+      color: #777;
+      font-size: 15px;
+      margin-top: 10px;
+      margin-bottom: 28px;
+    }
+
+    .report-btn {
+      background: #5c4033;
+      margin-top: 8px;
+    }
+
+    .report-btn:hover {
+      background: #8b5e3c;
+    }
+
+    .management-actions {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .manage-btn {
+      background: #2f5d50;
+    }
+
+    .manage-btn:hover {
+      background: #3f7666;
+    }
+
+    .holiday-box {
+      width: 86%;
+      margin: 0 auto 24px;
+      padding: 15px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 1.7;
+    }
+
+    .holiday-normal {
+      background: #eef7ff;
+      color: #24557a;
+      border: 1px solid #7aa7c7;
+    }
+
+    .holiday-active {
+      background: #fff3cd;
+      color: #7a5a00;
+      border: 1px solid #d6a100;
+    }
+
+    .holiday-error {
+      background: #f3f3f3;
+      color: #666;
+      border: 1px solid #bbb;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 25px;
+      }
+
+      .top-actions {
+        justify-content: center;
+      }
+
+      h2 {
+        font-size: 22px;
+      }
+
+      .buttons {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .logout-btn {
+        width: auto;
+      }
+
+      .status-box {
+        width: 95%;
+        font-size: 17px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>جامعة الإسراء</header>
+
+  <div class="container">
+
+    <div class="top-actions">
+      <button class="logout-btn" onclick="window.location.href='/logout'">
+        تسجيل الخروج
+      </button>
+    </div>
+
+    <h2>👨‍🏫 مرحباً {{ name }}</h2>
+
+    <p class="teacher-id">رقم المحاضر: {{ teacher_id }}</p>
+
+    <div id="holidayInfo" class="holiday-box holiday-normal">
+      جاري التحقق من العطل الرسمية...
+    </div>
+
+    <div class="buttons">
+      <button onclick="toggleAttendance('open')">✅ فتح تسجيل الحضور</button>
+      <button class="close-btn" onclick="toggleAttendance('close')">❌ إغلاق تسجيل الحضور</button>
+    </div>
+
+    <div id="status" class="status-box status-loading">
+      🔄 جاري التحقق من حالة التسجيل...
+    </div>
+
+    <p class="hint">يمكنك فتح أو إغلاق تسجيل الحضور للطلاب من هنا.</p>
+
+    <div class="management-actions">
+      <button class="report-btn" onclick="window.location.href='/teacher_reports_page'">
+        📊 عرض تقارير الطلاب
+      </button>
+      <button class="manage-btn" onclick="window.location.href='/manage_students_page'">
+        ⚙️ إدارة طلاب المساقات وأيام التعطيل
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    function updateStatusBox(message, isOpen) {
+      const statusBox = document.getElementById("status");
+
+      statusBox.innerText = message;
+      statusBox.className = "status-box";
+
+      if (isOpen) {
+        statusBox.classList.add("status-open");
+      } else {
+        statusBox.classList.add("status-closed");
+      }
+    }
+
+    function loadStatus() {
+      fetch("/attendance_status")
+        .then(res => res.json())
+        .then(data => {
+          updateStatusBox(data.message, data.open);
+        })
+        .catch(() => {
+          updateStatusBox("❌ خطأ في الاتصال بالسيرفر", false);
+        });
+    }
+
+    function loadHolidayStatus() {
+      const holidayBox = document.getElementById("holidayInfo");
+
+      fetch("/holiday_status")
+        .then(res => res.json())
+        .then(data => {
+          holidayBox.className = "holiday-box";
+
+          if (data.custom_day) {
+            holidayBox.classList.add("holiday-active");
+            holidayBox.innerText = `تعطيل داخلي اليوم: ${data.custom_day.reason}`;
+            return;
+          }
+
+          const lines = [];
+
+          if (data.available) {
+            if (data.is_holiday && data.holiday) {
+              lines.push(`عطلة رسمية اليوم: ${data.holiday.name}`);
+            } else if (data.next_holiday) {
+              lines.push(`أقرب عطلة رسمية: ${data.next_holiday.name} بتاريخ ${data.next_holiday.date}`);
+            } else {
+              lines.push("لا توجد عطلة رسمية قادمة ضمن البيانات المتاحة.");
+            }
+          } else {
+            lines.push("تعذر تحميل بيانات العطل الرسمية حالياً.");
+          }
+
+          if (data.next_custom_day) {
+            lines.push(`أقرب تعطيل داخلي: ${data.next_custom_day.reason} بتاريخ ${data.next_custom_day.date}`);
+          }
+
+          holidayBox.classList.add(data.available ? "holiday-normal" : "holiday-error");
+          holidayBox.innerText = lines.join(" | ");
+        })
+        .catch(() => {
+          holidayBox.className = "holiday-box holiday-error";
+          holidayBox.innerText = "تعذر تحميل بيانات العطل الرسمية حالياً.";
+        });
+    }
+
+    function toggleAttendance(action) {
+      const statusBox = document.getElementById("status");
+
+      statusBox.innerText = "🔄 جاري تحديث حالة التسجيل...";
+      statusBox.className = "status-box status-loading";
+
+      fetch("/toggle_attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: action })
+      })
+      .then(async res => {
+        const data = await res.json();
+
+        if (!res.ok) {
+          updateStatusBox(data.message || "تعذر تحديث حالة التسجيل", false);
+          loadHolidayStatus();
+          return;
+        }
+
+        updateStatusBox(data.message, data.open);
+      })
+      .catch(() => {
+        updateStatusBox("❌ خطأ في الاتصال بالسيرفر", false);
+      });
+    }
+
+    loadStatus();
+    loadHolidayStatus();
+  </script>
+</body>
+</html>

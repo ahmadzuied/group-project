@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>تقارير المحاضر</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Tahoma", sans-serif;
+      background: linear-gradient(to right, #f5f5dc, #d2b48c);
+      direction: rtl;
+      margin: 0;
+      padding: 0;
+      color: #2b211c;
+    }
+
+    header {
+      background: #5c4033;
+      color: #fff;
+      padding: 20px;
+      font-size: 25px;
+      font-weight: bold;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .container {
+      background: #fff;
+      padding: 35px;
+      padding-top: 55px;
+      border-radius: 18px;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.22);
+      width: 94%;
+      max-width: 1150px;
+      margin: 40px auto;
+      text-align: center;
+      position: relative;
+    }
+
+    .top-actions {
+      position: absolute;
+      top: 18px;
+      left: 25px;
+    }
+
+    .logout-btn {
+      background: #8b0000;
+      color: #fff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      transition: 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #650000;
+      transform: scale(1.03);
+    }
+
+    h2 {
+      color: #5c4033;
+      margin-bottom: 25px;
+      font-size: 27px;
+      border-bottom: 2px solid #d2b48c;
+      padding-bottom: 10px;
+      display: inline-block;
+    }
+
+    .filter-card {
+      background: #fdfaf3;
+      border: 1px solid #d2b48c;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    }
+
+    .filter-title {
+      color: #5c4033;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1.2fr 1.2fr auto auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    select,
+    input[type="text"] {
+      width: 100%;
+      padding: 13px;
+      border: 2px solid #d2b48c;
+      border-radius: 9px;
+      font-size: 15px;
+      text-align: right;
+      background: #fff;
+      color: #5c4033;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    select:focus,
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #5c4033;
+      box-shadow: 0 0 8px rgba(92,64,51,0.25);
+    }
+
+    button {
+      background: #5c4033;
+      color: #fff;
+      border: none;
+      padding: 13px 18px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+      transition: 0.3s;
+      white-space: nowrap;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.16);
+    }
+
+    button:hover {
+      background: #8b5e3c;
+      transform: translateY(-2px);
+    }
+
+    #message {
+      margin: 18px auto;
+      padding: 13px;
+      border-radius: 10px;
+      color: #5c4033;
+      background: #fff8dc;
+      border: 1px solid #d6a100;
+      font-weight: bold;
+      font-size: 16px;
+      width: 90%;
+      max-width: 650px;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: 25px;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1000px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border: 1px solid #d2b48c;
+      padding: 12px;
+      text-align: center;
+      font-size: 15px;
+    }
+
+    th {
+      background-color: #5c4033;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    td {
+      background-color: #fffdf8;
+    }
+
+    tr.good td {
+      background-color: #e6ffe6;
+      color: #1f7a1f;
+      font-weight: bold;
+    }
+
+    tr.average td {
+      background-color: #fff8dc;
+      color: #856404;
+      font-weight: bold;
+    }
+
+    tr.poor td {
+      background-color: #ffe6e6;
+      color: #B22222;
+      font-weight: bold;
+    }
+
+    .risk-badge {
+      display: inline-block;
+      min-width: 70px;
+      padding: 6px 10px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .risk-low {
+      background: #dff5df;
+      color: #1f7a1f;
+    }
+
+    .risk-medium {
+      background: #fff1bd;
+      color: #856404;
+    }
+
+    .risk-high {
+      background: #ffd8d8;
+      color: #B22222;
+    }
+
+    .back-btn {
+      margin-top: 25px;
+      background: #3e241c;
+    }
+
+    .back-btn:hover {
+      background: #5c3026;
+    }
+
+    .empty-row {
+      color: #5c4033;
+      font-weight: bold;
+      background: #fdfaf3;
+    }
+
+    @media (max-width: 900px) {
+      .controls {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 25px;
+        padding-top: 70px;
+      }
+
+      .top-actions {
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      h2 {
+        font-size: 22px;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .logout-btn {
+        width: auto;
+      }
+
+      #message {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>جامعة الإسراء</header>
+
+  <div class="container">
+
+    <div class="top-actions">
+      <button class="logout-btn" onclick="window.location.href='/logout'">
+        تسجيل الخروج
+      </button>
+    </div>
+
+    <h2>📋 تقارير المحاضر</h2>
+
+    <div class="filter-card">
+      <div class="filter-title">اختر المساق لعرض طلابه فقط</div>
+
+      <div class="controls">
+        <select id="courseFilter" onchange="loadReports()">
+          <option value="">-- اختر المساق --</option>
+        </select>
+
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="🔍 ابحث باسم الطالب أو الرقم الجامعي..."
+          onkeyup="searchStudent()"
+        >
+
+        <button onclick="sortByAttendance()">ترتيب حسب نسبة الحضور</button>
+        <button onclick="exportCSV()">تصدير CSV</button>
+        <button onclick="loadReports()">تحديث البيانات</button>
+      </div>
+    </div>
+
+    <p id="message">🔄 يتم تحميل مساقات المحاضر...</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>الرقم الجامعي</th>
+            <th>الاسم</th>
+            <th>المساق</th>
+            <th>الكلية</th>
+            <th>التخصص</th>
+            <th>السنة</th>
+            <th>عدد الحضور</th>
+            <th>النسبة</th>
+            <th>التوصية</th>
+            <th>المستوى</th>
+            <th>خطر الغياب</th>
+          </tr>
+        </thead>
+
+        <tbody id="reportTable">
+          <tr>
+            <td colspan="11" class="empty-row">اختر مساقًا لعرض البيانات</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <button class="back-btn" onclick="window.location.href='/teacher_page'">
+      ⬅️ رجوع لواجهة المحاضر
+    </button>
+
+  </div>
+
+  <script>
+    let reportsData = [];
+
+    function showMessage(message) {
+      document.getElementById("message").innerText = message;
+    }
+
+    function getRowClass(level) {
+      if (level === "ممتاز") return "good";
+      if (level === "متوسط") return "average";
+      return "poor";
+    }
+
+    function getSelectedCourseName() {
+      const select = document.getElementById("courseFilter");
+      return select.options[select.selectedIndex]?.text || "";
+    }
+
+    function getRiskClass(riskLevel) {
+      if (riskLevel === "منخفض") return "risk-low";
+      if (riskLevel === "متوسط") return "risk-medium";
+      return "risk-high";
+    }
+
+    function renderTable(data) {
+      const tableBody = document.getElementById("reportTable");
+      tableBody.innerHTML = "";
+
+      if (!data || data.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="11" class="empty-row">لا توجد بيانات لعرضها</td>
+          </tr>
+        `;
+        return;
+      }
+
+      data.forEach(record => {
+        const rowClass = getRowClass(record.level);
+        const riskClass = getRiskClass(record.risk_level);
+        const courseName = record.course || getSelectedCourseName();
+
+        tableBody.innerHTML += `
+          <tr class="${rowClass}">
+            <td>${record.id}</td>
+            <td>${record.name}</td>
+            <td>${courseName}</td>
+            <td>${record.college}</td>
+            <td>${record.major}</td>
+            <td>${record.year}</td>
+            <td>${record.attendance_count}</td>
+            <td>${record.percentage}%</td>
+            <td>${record.recommendation}</td>
+            <td>${record.level}</td>
+            <td><span class="risk-badge ${riskClass}" title="${record.risk_message}">${record.risk_level}</span></td>
+          </tr>
+        `;
+      });
+    }
+
+    function loadTeacherCourses() {
+      showMessage("🔄 يتم تحميل مساقات المحاضر...");
+
+      fetch("/teacher_courses")
+        .then(res => {
+          if (!res.ok) {
+            throw new Error("غير مصرح");
+          }
+          return res.json();
+        })
+        .then(data => {
+          const select = document.getElementById("courseFilter");
+          select.innerHTML = `<option value="">-- اختر المساق --</option>`;
+
+          if (!data.courses || data.courses.length === 0) {
+            showMessage("⚠️ لا يوجد مساقات مرتبطة بهذا المحاضر.");
+            renderTable([]);
+            return;
+          }
+
+          data.courses.forEach(course => {
+            select.innerHTML += `
+              <option value="${course.course_id}">
+                ${course.course_name}
+              </option>
+            `;
+          });
+
+          select.value = data.courses[0].course_id;
+          loadReports();
+        })
+        .catch(() => {
+          showMessage("❌ خطأ في تحميل مساقات المحاضر.");
+          renderTable([]);
+        });
+    }
+
+    function loadReports() {
+      const courseId = document.getElementById("courseFilter").value;
+
+      if (!courseId) {
+        showMessage("⚠️ يرجى اختيار المساق أولاً.");
+        reportsData = [];
+        renderTable([]);
+        return;
+      }
+
+      showMessage("🔄 يتم تحميل بيانات الطلاب...");
+
+      fetch(`/all_reports?course_id=${courseId}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error("خطأ في السيرفر");
+          }
+          return res.json();
+        })
+        .then(data => {
+          reportsData = data.reports || [];
+          renderTable(reportsData);
+
+          if (reportsData.length === 0) {
+            showMessage("⚠️ لا يوجد طلاب مسجلون في هذا المساق.");
+          } else {
+            showMessage("✅ تم تحميل تقارير المساق بنجاح.");
+          }
+        })
+        .catch(() => {
+          showMessage("❌ خطأ في تحميل البيانات. تأكد أنك داخل كمحاضر.");
+          renderTable([]);
+        });
+    }
+
+    function searchStudent() {
+      const input = document.getElementById("searchInput").value.toLowerCase();
+
+      const filtered = reportsData.filter(record =>
+        record.name.toLowerCase().includes(input) ||
+        record.id.toLowerCase().includes(input)
+      );
+
+      renderTable(filtered);
+    }
+
+    function sortByAttendance() {
+      const sorted = [...reportsData].sort((a, b) =>
+        a.percentage - b.percentage
+      );
+
+      renderTable(sorted);
+      showMessage("✅ تم ترتيب الطلاب حسب نسبة الحضور من الأقل إلى الأعلى.");
+    }
+
+    function exportCSV() {
+      if (reportsData.length === 0) {
+        showMessage("⚠️ لا توجد بيانات للتصدير.");
+        return;
+      }
+
+      const courseName = getSelectedCourseName();
+
+      let csvContent = "\uFEFF";
+      csvContent += "الرقم الجامعي,الاسم,المساق,الكلية,التخصص,السنة,عدد الحضور,النسبة,التوصية,المستوى\n";
+
+      reportsData.forEach(r => {
+        csvContent += `${r.id},${r.name},${courseName},${r.college},${r.major},${r.year},${r.attendance_count},${r.percentage}%,${r.recommendation},${r.level}\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `teacher_reports_${courseName}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showMessage("✅ تم تصدير ملف CSV بنجاح.");
+    }
+
+    loadTeacherCourses();
+  </script>
+</body>
+</html>

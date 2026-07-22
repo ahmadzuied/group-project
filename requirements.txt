@@ -1,0 +1,4 @@
+flask
+flask-cors
+werkzeug
+scikit-learn

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>📊 تقرير الطالب</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Tahoma", sans-serif;
+      background: linear-gradient(to right, #d2b48c, #f5f5dc);
+      direction: rtl;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #5c4033;
+      color: #fff;
+      padding: 16px;
+      font-size: 23px;
+      font-weight: bold;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    .container {
+      background: #fff;
+      padding: 22px;
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+      width: 92%;
+      max-width: 820px;
+      margin: 22px auto;
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .back-btn {
+      background: #5c4033;
+      color: #fff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: 0.3s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .back-btn:hover {
+      background: #8b5e3c;
+      transform: scale(1.03);
+    }
+
+    h2 {
+      color: #5c4033;
+      margin: 5px 0 18px;
+      text-align: center;
+      font-size: 23px;
+      border-bottom: 2px solid #d2b48c;
+      padding-bottom: 8px;
+    }
+
+    .section {
+      margin-bottom: 15px;
+      padding: 15px 18px;
+      border: 1px solid #d2b48c;
+      border-radius: 12px;
+      background: #fafafa;
+    }
+
+    .section h3 {
+      margin: 0 0 10px;
+      color: #5c4033;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section p {
+      font-size: 15px;
+      margin: 5px 0;
+      line-height: 1.6;
+    }
+
+    .stats-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .stats-text {
+      flex: 1;
+      min-width: 220px;
+      text-align: right;
+      font-weight: bold;
+    }
+
+    .chart-box {
+      flex: 0 0 190px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #attendanceChart {
+      width: 180px !important;
+      height: 180px !important;
+      margin: 0 !important;
+    }
+
+    .recommendation {
+      font-size: 16px;
+      font-weight: bold;
+      padding: 13px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .good {
+      background: #e6ffe6;
+      color: #228B22;
+      border: 2px solid #228B22;
+    }
+
+    .average {
+      background: #fff8dc;
+      color: #DAA520;
+      border: 2px solid #DAA520;
+    }
+
+    .poor {
+      background: #ffe6e6;
+      color: #B22222;
+      border: 2px solid #B22222;
+    }
+
+    .risk-card {
+      padding: 14px;
+      border-radius: 9px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 1.7;
+    }
+
+    .risk-low {
+      background: #e6ffe6;
+      color: #1f7a1f;
+      border: 2px solid #228B22;
+    }
+
+    .risk-medium {
+      background: #fff8dc;
+      color: #856404;
+      border: 2px solid #DAA520;
+    }
+
+    .risk-high {
+      background: #ffe6e6;
+      color: #B22222;
+      border: 2px solid #B22222;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 560px;
+    }
+
+    th, td {
+      border: 1px solid #d2b48c;
+      padding: 9px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th {
+      background: #5c4033;
+      color: #fff;
+    }
+
+    td {
+      background: #fffdf8;
+    }
+
+    .empty-row {
+      color: #5c4033;
+      font-weight: bold;
+      background: #fdfaf3;
+    }
+
+    footer {
+      text-align: center;
+      color: #5c4033;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .container {
+        padding: 18px;
+        margin: 16px auto;
+      }
+
+      .top-actions {
+        justify-content: center;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      .section {
+        padding: 14px;
+      }
+
+      .stats-row {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .stats-text {
+        text-align: center;
+      }
+
+      .chart-box {
+        flex: none;
+      }
+
+      #attendanceChart {
+        width: 170px !important;
+        height: 170px !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>جامعة الإسراء</header>
+
+  <div class="container">
+
+    <div class="top-actions">
+      <button class="back-btn" onclick="window.location.href='/attendance_page'">
+        ⬅️ رجوع
+      </button>
+    </div>
+
+    <h2>📊 تقرير الحضور للطالب</h2>
+
+    <div class="section" id="studentInfo">
+      <h3>👤 بيانات الطالب</h3>
+      <div id="info"></div>
+    </div>
+
+    <div class="section" id="attendanceStats">
+      <h3>📅 إحصائيات الحضور</h3>
+
+      <div class="stats-row">
+        <div id="stats" class="stats-text"></div>
+
+        <div class="chart-box">
+          <canvas id="attendanceChart" width="180" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>📖 تفاصيل المحاضرات</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>📚 المساق</th>
+              <th>📅 التاريخ</th>
+              <th>⏰ الوقت</th>
+            </tr>
+          </thead>
+
+          <tbody id="attendanceTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="recommendationSection">
+      <h3>💡 التوصية الذكية</h3>
+      <div id="recommendation"></div>
+    </div>
+
+    <div class="section" id="riskSection">
+      <h3>📈 تحليل خطر الغياب</h3>
+      <div id="riskAnalysis"></div>
+    </div>
+  </div>
+
+  <footer>© 2026 جامعة الإسراء - جميع الحقوق محفوظة</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const studentId = "{{ student_id }}";
+
+    fetch(`/report/${studentId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById("info").innerHTML = `
+            <p style="color:#B22222; font-weight:bold;">❌ ${data.error}</p>
+          `;
+          return;
+        }
+
+        document.getElementById("info").innerHTML = `
+          <p>👤 الاسم: ${data.name || "غير متوفر"}</p>
+          <p>🎓 الكلية: ${data.college || "غير متوفر"}</p>
+          <p>📚 التخصص: ${data.major || "غير متوفر"}</p>
+          <p>🆔 الرقم الجامعي: ${data.student_id}</p>
+        `;
+
+        document.getElementById("stats").innerHTML = `
+          <p>📅 عدد المحاضرات التي حضرتها: ${data.attendance_count}</p>
+          <p>📊 نسبة الحضور: <span dir="ltr">${data.percentage}%</span></p>
+        `;
+
+        let tableRows = "";
+
+        if (!data.records || data.records.length === 0) {
+          tableRows = `
+            <tr>
+              <td colspan="3" class="empty-row">لا توجد سجلات حضور حتى الآن</td>
+            </tr>
+          `;
+        } else {
+          data.records.forEach(r => {
+            tableRows += `
+              <tr>
+                <td>${r.course_id}</td>
+                <td>${r.date}</td>
+                <td>${r.time}</td>
+              </tr>
+            `;
+          });
+        }
+
+        document.getElementById("attendanceTable").innerHTML = tableRows;
+
+        let levelClass = "";
+
+        if (data.level === "ممتاز") {
+          levelClass = "good";
+        } else if (data.level === "متوسط") {
+          levelClass = "average";
+        } else {
+          levelClass = "poor";
+        }
+
+        document.getElementById("recommendation").innerHTML = `
+          <div class="recommendation ${levelClass}">
+            ${data.recommendation}
+          </div>
+        `;
+
+        let riskClass = "risk-high";
+
+        if (data.risk_level === "منخفض") {
+          riskClass = "risk-low";
+        } else if (data.risk_level === "متوسط") {
+          riskClass = "risk-medium";
+        }
+
+        document.getElementById("riskAnalysis").innerHTML = `
+          <div class="risk-card ${riskClass}">
+            مستوى الخطر: ${data.risk_level}<br>
+            ${data.risk_message}
+          </div>
+        `;
+
+        const ctx = document.getElementById("attendanceChart").getContext("2d");
+
+        new Chart(ctx, {
+          type: "pie",
+          data: {
+            labels: ["حضور", "غياب"],
+            datasets: [{
+              data: [data.percentage, 100 - data.percentage],
+              backgroundColor: ["#228B22", "#B22222"]
+            }]
+          },
+          options: {
+            responsive: false,
+            plugins: {
+              legend: {
+                position: "bottom"
+              }
+            }
+          }
+        });
+      })
+      .catch(() => {
+        document.getElementById("info").innerHTML = `
+          <p style="color:#B22222; font-weight:bold;">❌ خطأ في جلب التقرير</p>
+        `;
+      });
+  </script>
+</body>
+</html>
